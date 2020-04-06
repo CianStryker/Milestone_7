@@ -1,0 +1,536 @@
+---
+title: "Extensions"
+author: "Cian Stryker"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+
+library(citr)
+library(bookdown)
+library(stargazer)
+library(tidyverse)
+library(AER)
+library(ggplot2)
+library(readstata13)
+library(spdep) 
+library(tseries)
+library(spatialreg)
+```
+
+
+\hfill\break
+
+```{r Loading}
+
+# My loading code. 
+
+load("Data/kyrgyzstan.RData")
+data <- table
+
+```
+
+```{r Uzbek Table Confounder Extension}
+
+
+data_uzbek <- data[which(data$ethnicity=="Uzbek"),]
+
+data_uzbek$pd_in_scale <- scale(data_uzbek$pd_in)
+data_uzbek$dg_in_scale <- scale(data_uzbek$dg_in)
+data_uzbek$pd_out_scale <- scale(data_uzbek$pd_out)
+data_uzbek$dg_out_scale <- scale(data_uzbek$dg_out)
+data_uzbek$cooperation_index <- rowSums(cbind(data_uzbek$pd_in_scale, 
+                                              data_uzbek$dg_in_scale, 
+                                              data_uzbek$pd_out_scale, 
+                                              data_uzbek$dg_out_scale), na.rm=T)/4
+
+
+y <- data_uzbek %>%
+  mutate(comm_employer = case_when(comm_employer == 1 ~ "Kyrgyz",
+                                   comm_employer == 4 ~ "Other", 
+                                   comm_employer == -1 ~ "Unemployed",
+                                   comm_employer == 2 ~ "Uzbek", 
+                                   comm_employer == 3 ~ "Russian"))
+
+y$comm_employer <- factor(y$comm_employer, levels = c("Kyrgyz", "Uzbek", "Russian", "Unemployed", "Other"))
+
+
+model11 <- lm(pd_in_scale ~ affected + comm_lang_use  + education +  comm_employer, data=y)
+model22 <- lm(dg_in_scale ~ affected + comm_lang_use + education + comm_employer, data=y)
+model33 <- lm(pd_out_scale ~ affected + comm_lang_use +  education +  comm_employer, data=y)
+model44 <- lm(dg_out_scale ~ affected + comm_lang_use + education +  comm_employer, data=y)
+model55 <- lm(cooperation_index ~ affected + comm_lang_use + education + comm_employer, data=y)
+```
+
+
+\begin{center}
+\textbf{Table 1: Uzbek Confounders}
+
+```{r Table 1, results = "asis"}
+
+# Alright so this is weird. I know they are using stargazer 
+# to make the really nice looking table in the paper. I don't know
+# how this code works though. I can't seem to replicate it myself.
+# This is something else I'll need Alice's help with. Or I just need 
+# enough time to figure out how stargazer works. 
+
+cat("\\scalebox{.59}{")
+
+
+stargazer(model11, model22, model33, model44, model55,
+          covariate.labels = c("Destruction", "Common Language Usage", "Education", "Kyrgyz Employer", "Uzbek Employer", "Russian Employer", "Unemployed", "Constant"),
+          dep.var.labels = c("Prisoner's Dilemma (In-Group)", "Dictator Game (In-Group)", "Prisoner's Dilemma (Out-Group)", "Dictator Game (Out-Group)" , "Cooperation-Index"),
+          star.char = c("*", "**", "***"),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          single.row = TRUE, 
+          font.size = NULL,
+          column.sep.width = "1pt",
+          header = FALSE, type = 'latex', float = FALSE, out = "html")
+
+
+
+cat("}") # for the end of the scalebox
+```
+
+\end{center}
+
+\hfill\break
+\hfill\break
+
+Table 1 demonstrates the OLS regression results explaining all five prosocial outcomes as a result of the destruction dummy, common language usage, and the ethnicity of one’s employer. Of note is that the destruction dummy still has a statistically significant negative correlation to prosocial behavior. That being said, the effect size is diluted across all five measures, which did not occur when the authors tested for their original confounders. Also of note is that common language use also has a statistically significant but positive correlation to all five prosocial measures. No employer ethnicity had consistently significant results, however, which suggests this particular measure does not affect prosociality as strongly as either common language usage or victimization.
+
+
+\pagebreak
+
+```{r Table 2}
+model11x <- lm(pd_in_scale ~ affected + comm_lang_use + affected * comm_lang_use, data=data_uzbek)
+model22x <- lm(dg_in_scale ~ affected + comm_lang_use + affected * comm_lang_use, data=data_uzbek)
+model33x <- lm(pd_out_scale ~ affected + comm_lang_use + affected * comm_lang_use, data=data_uzbek)
+model44x <- lm(dg_out_scale ~ affected + comm_lang_use + affected * comm_lang_use, data=data_uzbek)
+model55x <- lm(cooperation_index ~ affected + comm_lang_use + affected * comm_lang_use, data=data_uzbek)
+```
+
+
+\begin{center}
+\textbf{Table 2: Uzbek Victimization and Common Language Usage Interaction}
+
+```{r Table 2 Stargazer, results = "asis"}
+
+# Alright so this is weird. I know they are using stargazer 
+# to make the really nice looking table in the paper. I don't know
+# how this code works though. I can't seem to replicate it myself.
+# This is something else I'll need Alice's help with. Or I just need 
+# enough time to figure out how stargazer works. 
+cat("\\scalebox{.59}{")
+
+
+stargazer(model11x, model22x, model33x, model44x, model55x,
+          covariate.labels = c("Destruction", "Common Language Usage", "Interaction", "Constant"),
+          dep.var.labels = c("Prisoner's Dilemma (In-Group)", "Dictator Game (In-Group)", "Prisoner's Dilemma (Out-Group)", "Dictator Game (Out-Group)" , "Cooperation-Index"),
+          star.char = c("*", "**", "***"),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          single.row = TRUE, 
+          font.size = NULL,
+          column.sep.width = "1pt",
+          header = FALSE, type = 'latex', float = FALSE)
+
+
+
+cat("}") # for the end of the scalebox
+```
+
+
+\end{center}
+
+\hfill\break
+\hfill\break
+
+Table 2 contains OLS regressions that explain prosocial outcomes as a result of only two variables: victimization and common language usage. Table 2 also includes an interaction between these two variables. The negative effect of victimization becomes even more muted than even Table 1’s victimization coefficients. For PD outgroup, the coefficient is no statistically significant. Other measures also see their significance decreases as well. The same is true, however, for common language usage which is no longer statistically significant for either in or out-group PD scores in comparison to Table 1. None of the interaction coefficients are significant either. Overall, I believe that Table 2 further supports the author’s initial findings that victimization has a strong negative correlation to Uzbek prosocial behavior. I would argue, though, that common language use is a more valid confounder than the authors’ original confounders and that its inclusion is important to understanding how personal prosociality behavior might affect the results of the paper more broadly. 
+
+\pagebreak
+
+
+```{r Starting Kyrgyz Data Tweaks}
+
+# This seems like they're just shifting the
+# data they want to use later by making certain
+# columns integers, specifically the affected 
+# and prisoner dilemma columns. Oh and the affected
+# - 1 bit is to shift the binary from 1 and 0s to
+# 0 and -1s. 
+
+data$affected <- as.integer(data$affected)
+data$affected <- data$affected - 1
+data$pd_in <- as.integer(data$pd_in)
+data$pd_out <- as.integer(data$pd_out)
+
+# This is for the later regression table 
+
+data$social_cap_retro <- data$leadership
+
+# here they just want to grab their data for Uzbeks
+# as opposed to including the data for thier Kyrgyz 
+# respondents. 
+
+data_kyrgyz <- data[which(data$ethnicity=="Kyrgyz"),]
+
+
+# Alright I had to find out what scale() does, but
+# apparently its a way of standardizing a bunch of 
+# data. The specifics are lost on my but the authors are 
+# scaling so that they can run regressions on the various 
+# in and out groups for the prisonners dilemma and dictator 
+# game results. They are also making an overall cooperation
+# index variable for later graphing, which they want to be 
+# on one standard scale, hence the scaling. 
+
+data_kyrgyz$pd_in_scale <- scale(data_kyrgyz$pd_in)
+data_kyrgyz$dg_in_scale <- scale(data_kyrgyz$dg_in)
+data_kyrgyz$pd_out_scale <- scale(data_kyrgyz$pd_out)
+data_kyrgyz$dg_out_scale <- scale(data_kyrgyz$dg_out)
+data_kyrgyz$cooperation_index <- rowSums(cbind(data_kyrgyz$pd_in_scale, 
+                                              data_kyrgyz$dg_in_scale, 
+                                              data_kyrgyz$pd_out_scale, 
+                                              data_kyrgyz$dg_out_scale), na.rm=T)/4
+
+
+```
+
+```{r Figure 5 Kyrgyz Data}
+
+# Alright I totally understand what's happening here. 
+# They are just running an OLS regression on the variables
+# that they made and scaled in the last step and trying
+# to see the effect that the affected variable had on each
+# of them in turn. 
+
+model1 <- lm(pd_in_scale ~ affected, data=data_kyrgyz)
+model2 <- lm(dg_in_scale ~ affected, data=data_kyrgyz)
+model3 <- lm(pd_out_scale ~ affected, data=data_kyrgyz)
+model4 <- lm(dg_out_scale ~ affected, data=data_kyrgyz)
+model5 <- lm(cooperation_index ~ affected, data=data_kyrgyz)
+
+
+# This all makes sense too. After running the regressions 
+# the authors have 5 list type data, but they need to extract 
+# the information that they want. It's kinda weird but I see that 
+# using this code they are getting the Variable, Coefficient, 
+# standard error, and name of test for each model. Cool. 
+
+model1Frame <- data.frame(Variable = rownames(summary(model1)$coef),
+                          Coefficient = summary(model1)$coef[, 1],
+                          SE = summary(model1)$coef[, 2],
+                          modelName = "Prisoner's Dilemma ingroup")[2,]
+model2Frame <- data.frame(Variable = rownames(summary(model2)$coef),
+                          Coefficient = summary(model2)$coef[, 1],
+                          SE = summary(model2)$coef[, 2],
+                          modelName = "Dictator Game ingroup")[2,]
+model3Frame <- data.frame(Variable = rownames(summary(model3)$coef),
+                          Coefficient = summary(model3)$coef[, 1],
+                          SE = summary(model3)$coef[, 2],
+                          modelName = "Prisoner's Dilemma outgroup")[2,]
+model4Frame <- data.frame(Variable = rownames(summary(model4)$coef),
+                          Coefficient = summary(model4)$coef[, 1],
+                          SE = summary(model4)$coef[, 2],
+                          modelName = "Dictator Game outgroup")[2,]
+model5Frame <- data.frame(Variable = rownames(summary(model5)$coef),
+                          Coefficient = summary(model5)$coef[, 1],
+                          SE = summary(model5)$coef[, 2],
+                          modelName = "Index")[2,]
+
+
+# So now they want to put all those extracted models together
+# in one dataframe. Cool. Checks out. They're using rbind to do taht
+# giving them a numeric order, and then using factor to put them 
+# in the order that they want. Not really sure what levels() does, 
+# but it looks like it cleans up the variable names to make them 
+# easier to graph later. 
+
+
+allModelFrame <- data.frame(rbind(model1Frame, model2Frame, model3Frame, model4Frame, model5Frame))
+allModelFrame$Variable <- c(1,2,3,4, 5)
+allModelFrame$Variable <- factor(allModelFrame$Variable, 
+                                 labels=c("Prisoner's Dilemma  Ingroup", "Dictator Game  Ingroup", 
+                                          "Prisoner's Dilemma  Outgroup", "Dictator Game  Outgroup", 
+                                          "Prosociality  Index"))
+
+levels(allModelFrame$Variable) <- gsub("  ", "\n", levels(allModelFrame$Variable))
+
+# Okay so they want to set confidence intervals 
+# at 90% and 95%. Seems clear. 
+
+interval1 <- -qnorm((1-0.90)/2)  # 90% multiplier
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+myColors <- c("#000000", "#000000", "#000000", "#000000", "#000000")
+
+# I understand ggplot so this is cool. A bunch of detail stuff such
+# as adding a vertical dotted line at 0.00 mark. Then they make a 
+# horizontal linerange for every variable with thier ranges being
+# the SE * the confidence intervals calculated before. Then the points
+# show the mean effect which is the SE times the 95% CI with some cool
+# shapes added in for coolness. Switching up the y axis labels, setting
+# the theme, setting the colors, getting rid of the ticks, and generally
+# making things pretty. 
+
+figure5 <- ggplot(allModelFrame, aes(colour = as.factor(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval1,
+                     ymax = Coefficient + SE*interval1),
+                 lwd = 1, position = position_dodge(width = 1/2)) + 
+  geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2),
+                  lwd = 1/4, position = position_dodge(width = 1/2),
+                  shape = 21, fill = "WHITE") + 
+  coord_flip(ylim = c(-1,1)) + theme_bw() +
+  scale_y_continuous(breaks = c(-1, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1)) +
+  theme(legend.position="none") + 
+  ylab("")  + xlab("") +     
+  scale_color_manual(values=myColors) +   
+  theme(text = element_text(size=12)) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+\begin{center}
+\textbf{Model 1:  Kyrgyz Prosocial Behavior}
+
+```{r Figure 5 Kyrgyz Data Output, fig.align="center"}
+
+# Ah here they want to show
+# the graph they made. I 
+# generally speaking understand 
+# figure 5. 
+
+figure5
+```
+
+\end{center}
+
+Model 1 consists of OLS linear regressions measuring prosocial outcomes as the result of victimization for the Kyrgyz sample of the authors’ survey data. The most noteworthy results is that the prisoner’s dilemma outgroup coefficient is positive. This suggests that Kyrgyz who were affected by the riots have on average higher levels of prosocial behavior towards Uzbeks. The variance is fairly high, but the positive nature of the coefficient is constant. For the other measures the coefficients are negative like the author’s Figure 5, but noticeably less strong. This suggests that at least for the Kyrgyz portion of the authors’ survey, prosocial behavior did not universally decrease, but that at least within the prisoner’s dilemma—the measure of cooperation—affected Kyrgyz are more willing to cooperate with Uzbeks than non-affected. 
+
+\pagebreak
+
+```{r Kyrgyz Table Extension, include=FALSE}
+
+# So many multivariate linear regressions. So this 
+# is their table info which requires the prisoner dilemma, 
+# dictator game, and cooperation index to be regressed by 
+# a bushel of variables. Here is where I'd like to do some
+# playing around when its my turn to make changes. 
+
+model1x <- lm(pd_in_scale ~ affected + economy_index + state_index + social_cap_retro + access_index + aj_vote_share, data=data_kyrgyz)
+model2x <- lm(dg_in_scale ~ affected + economy_index + state_index + social_cap_retro + access_index + aj_vote_share, data=data_kyrgyz)
+model3x <- lm(pd_out_scale ~ affected + economy_index + state_index + social_cap_retro + access_index + aj_vote_share, data=data_kyrgyz)
+model4x <- lm(dg_out_scale ~ affected + economy_index + state_index + social_cap_retro + access_index + aj_vote_share, data=data_kyrgyz)
+model5x <- lm(cooperation_index ~ affected + economy_index + state_index + social_cap_retro + access_index + aj_vote_share, data=data_kyrgyz)
+
+
+
+# I actually don't know why they are
+# running a summary on every model but
+# I assume they need to in order to run
+# the stargazer. 
+
+summary(model1x)
+summary(model2x)
+summary(model3x)
+summary(model4x)
+summary(model5x)
+
+
+```
+
+\begin{center}
+\textbf{Table 3: Kyrgyz Confounders}
+
+```{r Kyrgyz Table Extension Stargazer, results = "asis"}
+
+cat("\\scalebox{.59}{")
+
+stargazer(model1x, model2x, model3x, model4x, model5x,
+          covariate.labels = c("Destruction", "Wealth index", "State capacity index", "Community policing index", "Accessibility index", "AJ %"),
+          dep.var.labels = c("Prisoner's Dilemma (In-Group)", "Dictator Game (In-Group)", "Prisoner's Dilemma (Out-Group)", "Dictator Game (Out-Group)" , "Cooperation-Index"),
+          star.char = c("*", "**", "***"),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          single.row = TRUE, 
+          font.size = NULL,
+          column.sep.width = "1pt",
+          header = FALSE, type = 'latex', float = FALSE)
+
+cat("}") # for the end of the scalebox
+
+```
+
+\end{center}
+
+\hfill\break
+\hfill\break
+
+Table 3 measures prosocial outcomes as a result of victimization and the five confounders the authors created in their original paper through OLS regressions. The results are mixed. First of all, almost none of the confounders have statistically significant results and the results are on par with the author’s findings for confounder effects. When viewing the destruction dummy, however, a few key differences to the authors’ findings are clear. Again PD Out-group behavior is statistically significant and positive in nature. Interestingly, PD In-group prosocial behavior is statistically negative, which suggests affected Kyrgyz have very different attitudes towards cooperation with their coethnics and non-coethnics. No other measure is statistically significant though, which differs from the authors’ original findings for Uzbeks. 
+
+\pagebreak
+
+
+```{r Kyrygz Prosocial Instrument}
+
+data$distance <- data$apc_min_distance
+
+
+data_kyrgyz$distance <- 1-data_kyrgyz$apc_min_distance
+dataAgg <- aggregate(data_kyrgyz[,c("affected", "distance")], 
+                     list(data_kyrgyz$id_psu),
+                     mean)
+
+
+first_stage_ind <- lm(affected ~ distance, data=data_kyrgyz)
+first_stage_psu <- lm(affected ~ distance, data=dataAgg)
+
+model11_6 <- lm(pd_in_scale ~ distance , data=data_kyrgyz)
+model12_6 <- ivreg(pd_in_scale ~ affected | distance, data = data_kyrgyz)
+model21_6 <- lm(dg_in_scale ~ distance , data=data_kyrgyz)
+model22_6 <- ivreg(dg_in_scale ~ affected | distance , data = data_kyrgyz)
+model31_6 <- lm(pd_out_scale ~ distance , data=data_kyrgyz)
+model32_6 <- ivreg(pd_out_scale ~ affected  | distance , data = data_kyrgyz)
+model41_6 <- lm(dg_out_scale ~ distance , data=data_kyrgyz)
+model42_6 <- ivreg(dg_out_scale ~ affected  | distance , data = data_kyrgyz)
+model51_6 <- lm(cooperation_index ~ distance , data=data_kyrgyz)
+model52_6 <- ivreg(cooperation_index ~ affected  | distance , data = data_kyrgyz)
+
+dataAgg_6 <- aggregate(data_kyrgyz[,c("apc_min_distance", "distance", "pd_in_scale", "dg_in_scale", 
+                                   "pd_out_scale", "dg_out_scale", "cooperation_index", "affected", 
+                                   "economy_index", "state_index", "social_cap_retro")], 
+                     list(data_kyrgyz$id_psu),
+                     mean)
+
+names(dataAgg_6)[1] <- "psu"
+
+
+dataAgg_6 <- dataAgg_6[!is.na(dataAgg_6$social_cap_retro),] 
+
+
+model1_6 <- lm(pd_in_scale ~ distance , data=dataAgg_6)
+model2_6 <- lm(dg_in_scale ~ distance , data=dataAgg_6)
+model3_6 <- lm(pd_out_scale ~ distance , data=dataAgg_6)
+model4_6 <- lm(dg_out_scale ~ distance , data=dataAgg_6)
+model5_6 <- lm(cooperation_index ~ distance , data=dataAgg_6)
+
+model11Frame_6 <- data.frame(Variable = rownames(summary(model11_6)$coef),
+                           Coefficient = summary(model11_6)$coef[, 1],
+                           SE = summary(model11_6)$coef[, 2],
+                           modelName = "PD ingroup")[2,]
+model21Frame_6 <- data.frame(Variable = rownames(summary(model21_6)$coef),
+                           Coefficient = summary(model21_6)$coef[, 1],
+                           SE = summary(model21_6)$coef[, 2],
+                           modelName = "DG ingroup")[2,]
+model31Frame_6 <- data.frame(Variable = rownames(summary(model31_6)$coef),
+                           Coefficient = summary(model31_6)$coef[, 1],
+                           SE = summary(model31_6)$coef[, 2],
+                           modelName = "PD outgroup")[2,]
+model41Frame_6 <- data.frame(Variable = rownames(summary(model41_6)$coef),
+                           Coefficient = summary(model41_6)$coef[, 1],
+                           SE = summary(model41_6)$coef[, 2],
+                           modelName = "DG outgroup")[2,]
+model51Frame_6 <- data.frame(Variable = rownames(summary(model51_6)$coef),
+                           Coefficient = summary(model51_6)$coef[, 1],
+                           SE = summary(model51_6)$coef[, 2],
+                           modelName = "Index")[2,]
+model12Frame_6 <- data.frame(Variable = rownames(summary(model12_6)$coef),
+                           Coefficient = summary(model12_6)$coef[, 1],
+                           SE = summary(model12_6)$coef[, 2],
+                           modelName = "PD ingroup")[2,]
+model22Frame_6 <- data.frame(Variable = rownames(summary(model22_6)$coef),
+                           Coefficient = summary(model22_6)$coef[, 1],
+                           SE = summary(model22_6)$coef[, 2],
+                           modelName = "DG ingroup")[2,]
+model32Frame_6 <- data.frame(Variable = rownames(summary(model32_6)$coef),
+                           Coefficient = summary(model32_6)$coef[, 1],
+                           SE = summary(model32_6)$coef[, 2],
+                           modelName = "PD outgroup")[2,]
+model42Frame_6 <- data.frame(Variable = rownames(summary(model42_6)$coef),
+                           Coefficient = summary(model42_6)$coef[, 1],
+                           SE = summary(model42_6)$coef[, 2],
+                           modelName = "DG outgroup")[2,]
+model52Frame_6 <- data.frame(Variable = rownames(summary(model52_6)$coef),
+                           Coefficient = summary(model52_6)$coef[, 1],
+                           SE = summary(model52_6)$coef[, 2],
+                           modelName = "Index")[2,]
+
+# So they wanted to bring all models done for
+# the original data. And then arrange the order
+# using factor. 
+
+allModelFrame1_6 <- data.frame(rbind(model11Frame_6, model21Frame_6, model31Frame_6, model41Frame_6, model51Frame_6))
+allModelFrame1_6$Variable <- c(1,2,3,4,5)
+allModelFrame1_6$Variable <- factor(allModelFrame1_6$Variable, labels=c("Prisoner's Dilemma  Ingroup", "Dictator Game  Ingroup", "Prisoner's Dilemma  Outgroup", "Dictator Game  Outgroup", "Prosociality-  index"))
+levels(allModelFrame1_6$Variable) <- gsub("  ", "\n", levels(allModelFrame1_6$Variable))
+
+# So now they want to combine all the models that have the spatial 
+# component to them. I'm a little confused about what 2SL is, but
+# the code is similar to before. 
+
+allModelFrame2_6 <- data.frame(rbind(model12Frame_6, model22Frame_6, model32Frame_6, model42Frame_6, model52Frame_6))
+allModelFrame2_6$Variable <- c(1,2,3,4,5)
+allModelFrame2_6$Variable <- factor(allModelFrame2_6$Variable, labels=c("Prisoner's Dilemma  Ingroup", "Dictator Game  Ingroup", "Prisoner's Dilemma  Outgroup", "Dictator Game  Outgroup", "Prosociality-  index"))
+levels(allModelFrame2_6$Variable) <- gsub("  ", "\n", levels(allModelFrame2_6$Variable))
+
+
+# allModelFram <- rbind(allModelFrame1, allModelFrame2, allModelFrame3)
+# allModelFram$matrix_style <- rep(c("Instrument", "2SLS", "Instrument (SAM)"),each=5)
+
+
+allModelFram <- rbind(allModelFrame1_6, allModelFrame2_6)
+allModelFram$test <- rep(c("Instrument", "Instrument", "Instrument", "Instrument", "Instrument", "2SLS", "2SLS", "2SLS", "2SLS", "2SLS"))
+
+interval1 <- -qnorm((1-0.90)/2)  # 90% multiplier
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+# They set up their dodge position? I guess
+# that helps with the graphing? 
+
+pd = position_dodge(0.5)
+
+
+# aes(shape=matrix_style))
+
+
+figure6 <- ggplot(allModelFram, aes(shape=test)) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval1,
+                     ymax = Coefficient + SE*interval1),
+                 lwd = 1, position = pd) + 
+  geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval2,
+                     ymax = Coefficient + SE*interval2),
+                 lwd = 1/4, position = pd) + 
+  geom_point(aes(x = Variable, y = Coefficient, shape = test),
+             position = pd,fill = "WHITE", size = 3) + 
+  coord_flip(ylim = c(-1.5,1.5)) + theme_bw() + 
+  theme(legend.position="bottom") + 
+  scale_shape_manual(values = c(23, 24, 25), name ="") +
+  ylab("")  + xlab("") +     
+  theme(text = element_text(size=12))
+```
+
+\begin{center}
+\textbf{Model 2: Kyrgyz Prosocial Behavior with Instrumental Variable}
+
+```{r Output Prosocial Kyrgyz Instrument, fig.align="center"}
+
+figure6
+```
+
+\end{center}
+
+Model 2 further tests the robustness of my Model 1’s results by introducing the instrumental variable of distance to APC. Model 2 shows both the instrument’s OLS regression, where the destruction dummy is replaced by the closeness instrument, and the 2SLS coefficients, where the destruction dummy is instrumented with APC location, for each prosocial measurement.  The results show that both the instrument OLS regression sand 2SLS coefficients for PD out-group are positive, which means that victimization—instrumented—had a positive, causal effect on prosocial behavior in this measure. In viewing the other coefficients it is clear that while the other measures tend to be negative in nature, their variances now include some positive coefficients. This is contradictory to both the authors’ Figure 5 findings and also their overall argument.  
+
+
+
+
+
+
+
+
+
+
