@@ -39,7 +39,12 @@ ui <- fluidPage(theme = shinytheme("slate"),
                                
                                tags$h1("Source Code"), 
                                
-                               tags$p("Here is the link to my Github page for this project:", a(href = "https://github.com/CianStryker/Milestone_7", "https://github.com/CianStryker/Milestone_7")) 
+                               tags$p("Here is the link to my Github page for this project:", a(href = "https://github.com/CianStryker/Milestone_7", "https://github.com/CianStryker/Milestone_7")),
+                               
+                               tags$h1("Note"), 
+                               
+                               tags$p('Sometimes one of the pdfs will fail to load in this website, but just refresh the page and it will reload successfully.') 
+                               
                                
                         ),
                         
