@@ -13,9 +13,6 @@ ui <- fluidPage(theme = shinytheme("slate"),
                          tags$iframe(style="height:1000px; width:100%; scrolling=yes",
                                      src = "Extensions.pdf")),
                 
-                tabPanel("Rough Draft",
-                         tags$iframe(style="height:1000px; width:100%; scrolling=yes",
-                                     src = "Replication_Main.pdf")),
                 tabPanel(
                     
                     title = "About", 
@@ -43,7 +40,7 @@ ui <- fluidPage(theme = shinytheme("slate"),
                                
                                tags$h1("Note"), 
                                
-                               tags$p('Sometimes one of the pdfs will fail to load in this website, but just refresh the page and it will reload successfully.') 
+                               tags$p('Sometimes the pdf will fail to load if you spend too much time on the "About" tab , but just refresh the overall page and it will reload successfully.') 
                                
                                
                         ),
